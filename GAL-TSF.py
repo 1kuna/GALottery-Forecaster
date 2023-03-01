@@ -6,11 +6,13 @@ import os
 import tensorflow as tf
 import shutil
 from sklearn.model_selection import train_test_split
-
-# Name current scaling method
-current = 'robust'
+import numpy as np
+import sys
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+# Initialize current time
+currentTime = datetime.datetime.now().strftime('%m-%d-%Y %H-%M-%S')
 
 # Define function to get full file path
 def get_file_path(*subdirs, filename=None):
@@ -31,82 +33,154 @@ target_col = 'WINNING NUMBERS'
 x = data.drop([target_col], axis=1).values
 y = data[target_col].values
 
-# Split the data into training, validation, and test sets (70% for training, 15% for validation, and 15% for testing)
+# Split the data into training, validation, and test sets (80% for training, 10% for validation, and 10% for testing)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.10, shuffle=False)
 x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.10, shuffle=False)
 
-# Initialize scalers
-scalers = {
-    'robust': sk.RobustScaler(),
-    'minmax': sk.MinMaxScaler(),
-    'standard': sk.StandardScaler()
-}
+# Initialize tuners, optimizers, regularization techniques, and scalers
+tuners = ['random', 'bayesian', 'hyperband', 'greedy']
+optimizers = ['adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta', 'adamax', 'nadam']
+regularizers = [None, 'l1', 'l2']
+scalers = {'robust': sk.RobustScaler(), 'minmax': sk.MinMaxScaler(), 'standard': sk.StandardScaler()}
 
-x_train_scaled = {}
-x_val_scaled = {}
-x_test_scaled = {}
+# Iterate over each tuner, optimizer, regularization technique
+for tuner in tuners:
+    for optimizer in optimizers:
+        for regularizer in regularizers:
+            for name, scaler in scalers.items():
 
-for name, scaler in scalers.items():
-    scaler.fit(x_train)
-    x_train_scaled[name] = scaler.transform(x_train)
-    x_val_scaled[name] = scaler.transform(x_val)
-    x_test_scaled[name] = scaler.transform(x_test)
+                # Specify model directory based on tuner, optimizer, regularization technique, and scaler
+                model_dir = get_file_path("models beta6")
+                os.makedirs(model_dir, exist_ok=True)
+                
+                # Set the project name
+                project_name = f"{tuner}_{optimizer}_{regularizer}_{name}_{currentTime}"
 
-# Initialize model project name by date
-f = '%m-%d-%Y %H-%M-%S'
-nw = datetime.datetime.now()
-currentTime = nw.strftime(f)
+                # Find the previous run
+                latest_model_path = os.listdir(get_file_path("models beta6"))
+                latest_model_path.sort(reverse=True)
+                latest_model = None
+                
+                # If the latest model path contains something, set the latest model to the latest model path
+                if len(latest_model_path) > 0:
+                    latest_model = os.path.basename(latest_model_path[0])
 
-# Define directories and create if necessary
-model_dir = get_file_path("models")
-os.makedirs(model_dir, exist_ok=True)
+                # If latest model is not none, change TensorBoard current, old directory, and callback to the latest model
+                if latest_model is not None:
+                    tensorboard_dir = os.path.join(get_file_path("tensorboard beta6"), latest_model)
+                    old_tb_dir = os.path.join(get_file_path("old tb beta6"), latest_model)
+                    # Redefine TensorBoard callback
+                    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                        log_dir=os.path.join(get_file_path("tensorboard beta6"), latest_model), histogram_freq=50, 
+                        write_graph=True, write_images=True, update_freq='batch', 
+                        profile_batch=1, write_steps_per_second=False
+                    )
+                else:
+                    # Specify TensorBoard directory based on tuner, optimizer, regularization technique, and scaler
+                    tensorboard_dir = os.makedirs(os.path.join(get_file_path("tensorboard beta6"), project_name))
+                    old_tb_dir = os.makedirs(os.path.join(get_file_path("old tb beta6"), project_name))
 
-sheet_dir = get_file_path("sheets", currentTime)
-os.makedirs(sheet_dir, exist_ok=True)
+                # Define callbacks
+                tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                    log_dir=tensorboard_dir, histogram_freq=50, 
+                    write_graph=True, write_images=True, update_freq='batch', 
+                    profile_batch=1, write_steps_per_second=False
+                )
+                checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+                    filepath=get_file_path("checkpoints beta6",
+                    filename=(f"{name} {currentTime} checkpoint")), 
+                    save_freq=44700, verbose=1,
+                    save_best_only=True
+                )
+                stopping_callback = tf.keras.callbacks.EarlyStopping(
+                    monitor="val_loss",
+                    patience=30
+                )
+                
+                # Define callbacks list
+                callbacks = [checkpoint_callback, tensorboard_callback, stopping_callback]
 
-# Save each dataframe into a csv for later predictions
-sets = [("train_scaled", x_train_scaled), ("val_scaled", x_val_scaled), ("test_scaled", x_test_scaled)]
+                # # Write a batch file to initialize the conda tf environment and TensorBoard in the same cmd window with a sleep after the environment is initialized
+                # with open(get_file_path("start_tensorboard.bat"), "w") as f:
+                #     f.write(f"tasklist | find \"chrome.exe\" && taskkill /im chrome.exe /f\n")
+                #     f.write(f"conda activate tf\n")
+                #     f.write(f"sleep 3\n")
+                #     f.write(f"tensorboard --logdir='{tensorboard_dir}'\n")
+                #     f.write(f"sleep 3\n")
+                #     f.write(f"tasklist | find \"chrome.exe\" || start chrome http://localhost:6006/?darkMode=true#hparams\n")
+                #     f.write(f"sleep 3\n")
 
-for set_name, set_data in sets:
-    set_df = pd.DataFrame(set_data[current])
-    set_df.to_csv(get_file_path(sheet_dir, filename=f"{set_name}.csv"), index=False, header=True)
+                # # Run the batch file
+                # os.system(get_file_path("start_tensorboard.bat"))
 
-# Initialize the AutoKeras model
-clf = ak.TimeseriesForecaster(
-    overwrite=False, max_trials=2, lookback=21, 
-    project_name=(f"beta5 {current} {currentTime}"), 
-    directory=model_dir
-)
+                # Initialize the model
+                def run_model():
+                    clf = ak.TimeseriesForecaster(
+                        tuner=tuner,
+                        optimizer=optimizer,
+                        max_trials=250,
+                        lookback=21,
+                        project_name=project_name,
+                        directory=model_dir,
+                        overwrite=False,
+                        objective='val_loss'
+                    )
 
-# # Remove previous tensorboard logs if they exist
-# tensorboard_dir = get_file_path("tensorboard")
-# tensorboard_subdirs = [d for d in os.listdir(tensorboard_dir) if os.path.isdir(os.path.join(tensorboard_dir, d))]
-# for subdir in tensorboard_subdirs:
-#     shutil.rmtree(os.path.join(tensorboard_dir, subdir))
+                    return clf
 
-# Open Tensorboard in browser
-# os.system(f"start cmd /k tensorboard --logdir={tensorboard_dir}")
+                # Load model checkpoint if it exists, otherwise initialize new model
+                if latest_model is not None:
+                    print(f"Loading previous model: {latest_model}")
+                    project_name = latest_model
+                    clf = run_model()
+                    print("Previous training run resumed successfully.")
+                else:
+                    print("No previous model found, initializing new model.")
+                    clf = run_model()
 
-# Define callbacks
-tensorboard_callback = tf.keras.callbacks.TensorBoard(
-    log_dir=get_file_path("tensorboard"), histogram_freq=50, 
-    write_graph=True, write_images=True, update_freq='batch', 
-    profile_batch=1, write_steps_per_second=False
-)
-checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath=get_file_path("checkpoints",
-    filename=(f"{current} {currentTime} checkpoint")), 
-    save_freq=89400, verbose=1
-)
-stopping_callback = tf.keras.callbacks.EarlyStopping(
-    monitor="val_loss",
-    patience=50,
-)
+                # Apply L1/L2 regularization
+                if regularizer == 'l1':
+                    clf.add_regularizer(tf.keras.regularizers.l1(0.01))
+                elif regularizer == 'l2':
+                    clf.add_regularizer(tf.keras.regularizers.l2(0.01))
 
-callbacks = [checkpoint_callback, tensorboard_callback, stopping_callback]
+                # Scale the data
+                x_train_scaled = scaler.fit_transform(x_train)
+                x_val_scaled = scaler.transform(x_val)
+                x_test_scaled = scaler.transform(x_test)
+                
+                # Fit the model
+                clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks)
+                
+                # Evaluate the model but if there is an error, clear the session and try again
+                try:
+                    print("Evaluating model...")
+                    predictions = clf.predict(x_test_scaled)
+                    error = np.mean((np.abs(y_test - predictions) / np.abs(predictions)) * 100)
+                    print(f"Percentage error: {np.mean((np.abs(y_test - predictions) / np.abs(predictions)) * 100)}")
+                except:
+                    print("Error evaluating model, clearing session and trying again...")
+                    tf.keras.backend.clear_session()
+                    clf = run_model()
+                    print("Evaluating model...")
+                    predictions = clf.predict(x_test_scaled)
+                    error = np.mean((np.abs(y_test - predictions) / np.abs(predictions)) * 100)
+                    print(f"Percentage error: {np.mean((np.abs(y_test - predictions) / np.abs(predictions)) * 100)}")
 
-# Fit, summarize, evaluate, and export the model
-clf.fit(x_train_scaled[current], y_train, epochs=25, validation_data=(x_val_scaled[current], y_val), shuffle=False)
-print(clf.predict(x_test_scaled[current]))
-model = clf.export_model()
-print(model.summary())
+                # Evaluate the trained model on the test set and print the results to a text file                
+                with open(get_file_path("results beta6", filename="results.txt"), "a") as f:
+                    f.write(f"{model_dir}, Percentage Error: {error}\n\n")
+
+                # Put the name of the lowest error model at the top of the text file
+                with open(get_file_path("results beta6", filename="results.txt"), "r") as f:
+                    lines = f.readlines()
+                with open(get_file_path("results beta6", filename="results.txt"), "w") as f:
+                    lines.sort(key=lambda x: str(x.split(" ")[-1]))
+                    f.writelines(lines)
+                
+                # Move the model to the "finished models" folder and move the TensorBoard model folder to "old tb files" folder if it exists
+                shutil.move(get_file_path(model_dir, filename=project_name), get_file_path("finished models beta6"))
+                if os.path.exists(tensorboard_dir):
+                    shutil.move(tensorboard_dir, old_tb_dir)
+                
+                sys.exit()
