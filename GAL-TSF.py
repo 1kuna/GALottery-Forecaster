@@ -75,11 +75,11 @@ for tuner in tuners[current_tuner_index:]:
                 print(f"Current scaler: {name}")
 
                 # Specify model directory and project name based on tuner, optimizer, regularization technique, and scaler
-                model_dir = get_file_path("models beta6")
+                model_dir = get_file_path("forecast\\models")
                 project_name = f"{tuner}_{optimizer}_{regularizer}_{name}_{currentTime}"            
 
                 # Find the previous run
-                latest_model_path = os.listdir(get_file_path("models beta6"))
+                latest_model_path = os.listdir(get_file_path("forecast\\models"))
                 latest_model_path.sort(reverse=True)
                 latest_model = None
                 
@@ -89,18 +89,18 @@ for tuner in tuners[current_tuner_index:]:
 
                 # If latest model is not none, change TensorBoard current, old directory, and callback to the latest model
                 if latest_model is not None:
-                    tensorboard_dir = os.path.join(get_file_path("tensorboard beta6"), latest_model)
-                    old_tb_dir = os.path.join(get_file_path("old tb beta6"), latest_model)
+                    tensorboard_dir = os.path.join(get_file_path("forecast\\tensorboard"), latest_model)
+                    old_tb_dir = os.path.join(get_file_path("forecast\\old tb"), latest_model)
                     # Redefine TensorBoard callback
                     tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                        log_dir=os.path.join(get_file_path("tensorboard beta6"), latest_model), histogram_freq=50, 
+                        log_dir=os.path.join(get_file_path("forecast\\tensorboard"), latest_model), histogram_freq=50, 
                         write_graph=True, write_images=True, update_freq='batch', 
                         profile_batch=1, write_steps_per_second=False
                     )
                 else:
                     # Specify TensorBoard directory based on tuner, optimizer, regularization technique, and scaler
-                    tensorboard_dir = os.path.join(get_file_path("tensorboard beta6"), project_name)
-                    old_tb_dir = os.path.join(get_file_path("old tb beta6"), project_name)
+                    tensorboard_dir = os.path.join(get_file_path("forecast\\tensorboard"), project_name)
+                    old_tb_dir = os.path.join(get_file_path("forecast\\old tb"), project_name)
 
 
                 # Define callbacks
@@ -189,21 +189,21 @@ for tuner in tuners[current_tuner_index:]:
                     print(f"Percentage error: {error:.2f}")
 
                 # Evaluate the trained model on the test set and print the results to a text file                
-                with open(get_file_path("results beta6", filename="results.txt"), "a") as f:
+                with open(get_file_path("forecast\\results", filename="results.txt"), "a") as f:
                     f.write(f"{model_dir}, Percentage Error: {error}\n\n")
 
                 # Write the model name and error result to a text file and sort the file by error
-                with open(get_file_path("results beta6", filename="results.txt"), "a") as f:
+                with open(get_file_path("forecast\\results", filename="results.txt"), "a") as f:
                     f.write(f"{model_dir}, Percentage Error: {error}\n\n")
-                with open(get_file_path("results beta6", filename="results.txt"), "r") as f:
+                with open(get_file_path("forecast\\results", filename="results.txt"), "r") as f:
                     lines = f.readlines()
-                with open(get_file_path("results beta6", filename="results.txt"), "w") as f:
+                with open(get_file_path("forecast\\results", filename="results.txt"), "w") as f:
                     if len(lines) > 3:
                         for line in sorted(lines, key=lambda x: float(x.split(": ")[1]) if len(x.split(": ")) > 1 else 0, reverse=True):
                             f.write(line)
                 
                 # Move the model to the "finished models" folder and move the TensorBoard model folder to "old tb files" folder if it exists
-                shutil.move(get_file_path(model_dir, filename=project_name), get_file_path("finished models beta6"))
+                shutil.move(get_file_path(model_dir, filename=project_name), get_file_path("forecast\\finished models"))
                 if os.path.exists(tensorboard_dir):
                     shutil.move(tensorboard_dir, old_tb_dir)
 
