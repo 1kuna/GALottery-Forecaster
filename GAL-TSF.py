@@ -1,16 +1,23 @@
 import pandas as pd
 import autokeras as ak
 import datetime
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
-import sklearn.preprocessing as skpp
-import numpy as np
+import sklearn.preprocessing as sk
+import os
 
-# Initialize scaler
-scaler = skpp.MinMaxScaler()
+# Initialize scalers
+robust = sk.RobustScaler()
+minmax = sk.MinMaxScaler()
+standard = sk.StandardScaler()
+
+# Get the absolute path of the directory containing the script
+base_path = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the full file path to the combined csv subfolder, then get the file
+file_path = os.path.join(base_path, "fullcomb", "combined.csv").replace("/", "\\")
 
 # Read in the csv file
-data = pd.read_csv("G:\\Other computers\\KUNA DESKTOP\\Creative Cloud Files\\python projs\\galottery\\fullcomb\\combined.csv", header=0)
+data = pd.read_csv(file_path, header=0)
 
 # Remove missing data
 data = data.dropna()
@@ -63,36 +70,76 @@ print(data["WINNING NUMBERS"].shape)
 x = data.drop([target_col], axis=1).values
 y = data[target_col].values
 
-# Split the data into training, validation, and testing sets
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=False)
-x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, shuffle=False)
+# Split the data into training, validation, and testing sets (not randomized)
+split_1 = int(x.shape[0] * 0.7)
+split_2 = int(x.shape[0] * 0.85)
+x_train = x[:split_1]
+y_train = y[:split_1]
+x_val = x[split_1:split_2]
+y_val = y[split_1:split_2]
+x_test = x[split_2:]
+y_test = y[split_2:]
+
+x_train_1 = x_train
+x_train_2 = x_train
+x_train_3 = x_train
+x_test_1 = x_test
+x_test_2 = x_test
+x_test_3 = x_test
 
 # Fit the StandardScaler to the training data
-scaler.fit(x_train)
+robust.fit(x_train)
+minmax.fit(x_train)
+standard.fit(x_train)
+
+x_train_minmax = x_train_1
+x_train_robust = x_train_2
+x_train_standard = x_train_3
+x_test_robust = x_test_2
+x_test_standard = x_test_3
+x_test_minmax = x_test_1
 
 # Apply the transformation to both the training and testing data
-x_train = scaler.transform(x_train)
-x_val = scaler.transform(x_val)
-x_test = scaler.transform(x_test)
+x_train_robust = robust.transform(x_train_robust)
+x_train_standard = standard.transform(x_train_standard)
+x_train_minmax = minmax.transform(x_train_minmax)
+x_val_robust = robust.transform(x_val)
+x_test_robust = robust.transform(x_test)
+x_val_minmax = minmax.transform(x_val)
+x_test_minmax = minmax.transform(x_test)
+x_val_standard = standard.transform(x_val)
+x_test_standard = standard.transform(x_test)
+x_test_robust = robust.transform(x_test_robust)
+x_test_standard = standard.transform(x_test_standard)
+x_test_minmax = minmax.transform(x_test_minmax)
 
 # Initialize model project name by date
 f = '%m-%d-%Y %H-%M-%S'
 nw = datetime.datetime.now()
 currentTime = nw.strftime(f)
 
+# Construct the full folder path to the "models" subfolder
+model_save = os.path.join(base_path, "models").replace("/", "\\")
+
 # Initialize the AutoKeras model
-clf = ak.TimeseriesForecaster(overwrite=False, max_trials=500, lookback=10, project_name=currentTime, directory='G:\\Other computers\\KUNA DESKTOP\\Creative Cloud Files\\python projs\\galottery\\models')
+clf = ak.TimeseriesForecaster(overwrite=False, max_trials=5, lookback=15, project_name=(f"beta2 standard {currentTime}"), directory=model_save)
 
 # Fit the model to the training data
-clf.fit(x_train, y_train, epochs=2000, validation_data=(x_val, y_val))
+clf.fit(x_train_standard, y_train, epochs=20, validation_data=(x_val_standard, y_val))
 
-# Make 5 predictions for the test data
-n_samples = 5
-predictions = []
-for i in range(n_samples):
-    prediction = clf.predict(x_val)
-    predictions.append(prediction)
+model = clf.export_model()
 
-# Print the predictions
-for i, prediction in enumerate(predictions):
-    print("Prediction", i, ":", prediction)
+model.summary()
+
+# # Make 5 predictions for the test data
+# n_samples = 5
+# predictions = []
+# for i in range(n_samples):
+#     prediction = clf.predict(x_test_standard)
+#     print(predictions.shape)
+#     print(clf.evaluate(x_val_standard, y_val))
+#     predictions.append(prediction)
+
+# # Print the predictions
+# for i, prediction in enumerate(predictions):
+#     print("Prediction", i, ":", prediction)
