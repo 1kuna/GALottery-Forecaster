@@ -1,7 +1,6 @@
 import pandas as pd
 import autokeras as ak
 import datetime
-from sklearn.model_selection import train_test_split
 import sklearn.preprocessing as sk
 import os
 
@@ -14,7 +13,7 @@ standard = sk.StandardScaler()
 base_path = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the full file path to the combined csv subfolder, then get the file
-file_path = os.path.join(base_path, "fullcomb", "combined.csv").replace("/", "\\")
+file_path = os.path.join(base_path, "fullcomb", "combined backup.csv").replace("/", "\\")
 
 # Read in the csv file
 data = pd.read_csv(file_path, header=0)
@@ -80,38 +79,21 @@ y_val = y[split_1:split_2]
 x_test = x[split_2:]
 y_test = y[split_2:]
 
-x_train_1 = x_train
-x_train_2 = x_train
-x_train_3 = x_train
-x_test_1 = x_test
-x_test_2 = x_test
-x_test_3 = x_test
-
 # Fit the StandardScaler to the training data
-robust.fit(x_train)
-minmax.fit(x_train)
-standard.fit(x_train)
+scalers = {'robust': robust, 'minmax': minmax, 'standard': standard}
 
-x_train_minmax = x_train_1
-x_train_robust = x_train_2
-x_train_standard = x_train_3
-x_test_robust = x_test_2
-x_test_standard = x_test_3
-x_test_minmax = x_test_1
+x_train_scaled = {}
+x_val_scaled = {}
+x_test_scaled = {}
 
-# Apply the transformation to both the training and testing data
-x_train_robust = robust.transform(x_train_robust)
-x_train_standard = standard.transform(x_train_standard)
-x_train_minmax = minmax.transform(x_train_minmax)
-x_val_robust = robust.transform(x_val)
-x_test_robust = robust.transform(x_test)
-x_val_minmax = minmax.transform(x_val)
-x_test_minmax = minmax.transform(x_test)
-x_val_standard = standard.transform(x_val)
-x_test_standard = standard.transform(x_test)
-x_test_robust = robust.transform(x_test_robust)
-x_test_standard = standard.transform(x_test_standard)
-x_test_minmax = minmax.transform(x_test_minmax)
+for name, scaler in scalers.items():
+    scaler.fit(x_train)
+    x_train_scaled[name] = scaler.transform(x_train)
+    x_val_scaled[name] = scaler.transform(x_val)
+    x_test_scaled[name] = scaler.transform(x_test)
+
+# Name current scaling method
+current = 'minmax'
 
 # Initialize model project name by date
 f = '%m-%d-%Y %H-%M-%S'
@@ -121,25 +103,32 @@ currentTime = nw.strftime(f)
 # Construct the full folder path to the "models" subfolder
 model_save = os.path.join(base_path, "models").replace("/", "\\")
 
+csv_save = os.path.join(base_path, "sheets", currentTime).replace("/", "\\")
+os.makedirs(csv_save)
+
+# Save each dataframe into a csv for later predictions
+sets = [("train_scaled", x_train_scaled), ("val_scaled", x_val_scaled), ("test_scaled", x_test_scaled)]
+
+for set_name, set_data in sets:
+    set_df = pd.DataFrame(set_data[current])
+    set_df.to_csv(f"{csv_save}\{set_name}.csv", index=False)
+
+print(f"X Training Data Shape: {x_train_scaled[current].shape} | \
+    X Validation Data Shape: {x_val_scaled[current].shape} | \
+    X Test Data Shape: {x_test_scaled[current].shape} | \
+    Y Training Data Shape: {y_train.shape} | \
+    Y Validation Data Shape: {y_val.shape} | \
+    Y Test Data Shape: {y_test.shape} | \
+    ")
+
 # Initialize the AutoKeras model
-clf = ak.TimeseriesForecaster(overwrite=False, max_trials=5, lookback=15, project_name=(f"beta2 standard {currentTime}"), directory=model_save)
+clf = ak.TimeseriesForecaster(overwrite=False, max_trials=2500, lookback=21, project_name=(f"beta3 {current} {currentTime}"), directory=model_save)
 
 # Fit the model to the training data
-clf.fit(x_train_standard, y_train, epochs=20, validation_data=(x_val_standard, y_val))
+clf.fit(x_train_scaled[current], y_train, epochs=None, validation_data=(x_val_scaled[current], y_val))
 
 model = clf.export_model()
 
 model.summary()
 
-# # Make 5 predictions for the test data
-# n_samples = 5
-# predictions = []
-# for i in range(n_samples):
-#     prediction = clf.predict(x_test_standard)
-#     print(predictions.shape)
-#     print(clf.evaluate(x_val_standard, y_val))
-#     predictions.append(prediction)
-
-# # Print the predictions
-# for i, prediction in enumerate(predictions):
-#     print("Prediction", i, ":", prediction)
+print(clf.evaluate(x_val_scaled[current], y_val))
