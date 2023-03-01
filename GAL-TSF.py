@@ -187,20 +187,16 @@ for tuner in tuners[current_tuner_index:]:
                     predictions = clf.predict(x_test_scaled)
                     error = np.mean((np.abs(y_test - predictions) / np.abs(predictions)) * 100)
                     print(f"Percentage error: {error:.2f}")
-
-                # Evaluate the trained model on the test set and print the results to a text file                
-                with open(get_file_path("forecast\\results", filename="results.txt"), "a") as f:
-                    f.write(f"{model_dir}, Percentage Error: {error}\n\n")
-
+                               
                 # Write the model name and error result to a text file and sort the file by error
-                with open(get_file_path("forecast\\results", filename="results.txt"), "a") as f:
-                    f.write(f"{model_dir}, Percentage Error: {error}\n\n")
-                with open(get_file_path("forecast\\results", filename="results.txt"), "r") as f:
+                with open(get_file_path("forecast", filename="results.txt"), "a") as f:
+                    f.write(f"Model: {project_name} || Percentage Error: {error:.2f}%\n\n")
+                with open(get_file_path("forecast", filename="results.txt"), "r") as f:
                     lines = f.readlines()
-                with open(get_file_path("forecast\\results", filename="results.txt"), "w") as f:
+                with open(get_file_path("forecast", filename="results.txt"), "w") as f:
                     if len(lines) > 3:
                         for line in sorted(lines, key=lambda x: float(x.split(": ")[1]) if len(x.split(": ")) > 1 else 0, reverse=True):
-                            f.write(line)
+                            f.write(f"{line}\n")
                 
                 # Move the model to the "finished models" folder and move the TensorBoard model folder to "old tb files" folder if it exists
                 shutil.move(get_file_path(model_dir, filename=project_name), get_file_path("forecast\\finished models"))
