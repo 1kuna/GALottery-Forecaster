@@ -53,10 +53,17 @@ current_regularizer_index = 0
 current_scaler_index = 0
 
 # Load the loop state if the program is interrupted
-with open(get_file_path("loop_state.pickle"), "rb") as f:
-    state = pickle.load(f)
-    current_tuner_index, current_optimizer_index, current_regularizer_index, current_scaler_index = state
-    print(f"Resuming from: (tuner: {current_tuner_index}, optimizer: {current_optimizer_index}, regularizer: {current_regularizer_index}, and scaler: {current_scaler_index})")
+def load_pickle():
+    with open(get_file_path("loop_state.pickle"), "rb") as f:
+        state = pickle.load(f)
+        current_tuner_index, current_optimizer_index, current_regularizer_index, current_scaler_index = state
+        print(f"Resuming from: (tuner: {current_tuner_index}, optimizer: {current_optimizer_index}, regularizer: {current_regularizer_index}, and scaler: {current_scaler_index})")
+
+# Create Pickle save function
+def save_pickle():
+    with open(get_file_path("loop_state.pickle"), "wb") as f:
+        pickle.dump((current_tuner_index, current_optimizer_index, current_regularizer_index, current_scaler_index), f)
+        print(f"Saved state: (tuner: {current_tuner_index}, optimizer: {current_optimizer_index}, regularizer: {current_regularizer_index}, and scaler: {current_scaler_index})")
 
 # Iterate over each tuner, optimizer, regularization technique, and scaler
 for tuner in tuners[current_tuner_index:]:
@@ -64,9 +71,8 @@ for tuner in tuners[current_tuner_index:]:
         for regularizer in regularizers[current_regularizer_index:]:
             for name, scaler in list(scalers.items())[current_scaler_index:]:
 
-                # Save the loop state if the program is interrupted
-                with open(get_file_path("loop_state.pickle"), "wb") as f:
-                    pickle.dump((current_tuner_index, current_optimizer_index, current_regularizer_index, current_scaler_index), f)
+                # Load the loop state after each iteration
+                load_pickle()
 
                 # Print current tuner, optimizer, regularization technique, and scaler
                 print(f"Current tuner: {tuner}")
@@ -208,9 +214,13 @@ for tuner in tuners[current_tuner_index:]:
 
                 # Increment current scaler index
                 current_scaler_index += 1
+                save_pickle()
             # Increment current regularizer index
             current_regularizer_index += 1
+            save_pickle()
         # Increment current optimizer index
         current_optimizer_index += 1
+        save_pickle()
     # Increment current tuner index
     current_tuner_index += 1
+    save_pickle()
