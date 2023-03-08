@@ -213,14 +213,30 @@ for tuner in tuners[current_tuner_index:]:
                 tf.keras.backend.clear_session()
 
                 # Increment current scaler index
-                current_scaler_index += 1
-                save_pickle()
+                if current_scaler_index < len(scalers) - 1:
+                    current_scaler_index += 1
+                    save_pickle()
+                else:
+                    current_scaler_index = 0
+                    save_pickle()
             # Increment current regularizer index
-            current_regularizer_index += 1
-            save_pickle()
+            if current_regularizer_index < len(regularizers) - 1:
+                current_regularizer_index += 1
+                save_pickle()
+            else:
+                current_regularizer_index = 0
+                save_pickle()
         # Increment current optimizer index
-        current_optimizer_index += 1
-        save_pickle()
+        if current_optimizer_index < len(optimizers) - 1:
+            current_optimizer_index += 1
+            save_pickle()
+        else:
+            current_optimizer_index = 0
+            save_pickle()
     # Increment current tuner index
-    current_tuner_index += 1
-    save_pickle()
+    if current_tuner_index < len(tuners) - 1:
+        current_tuner_index += 1
+        save_pickle()
+    else:
+        current_tuner_index = 0
+        save_pickle()
