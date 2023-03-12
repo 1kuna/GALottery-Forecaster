@@ -19,7 +19,8 @@ data["DRAW"] = data["DRAW"].map(draw_mapping).astype("float64")
 
 # Convert "DATE" column to datetime
 data['DATE'] = pd.to_datetime(data['DATE'])
-data['DATE'] = data['DATE'].apply(lambda x: x.value).astype("float64")
+data['DATE'] = data['DATE'].apply(lambda x: x.timestamp())
+data['DATE'] = data['DATE'].astype('float64')
 
 # Format the "WINNING NUMBERS" column
 data['WINNING NUMBERS'] = data['WINNING NUMBERS'].apply(lambda x: str(int(x)).zfill(3))
@@ -48,7 +49,7 @@ data['WINNING NUMBERS'] = pd.to_numeric(data['WINNING NUMBERS'], errors='coerce'
 data.dropna(subset=['WINNING NUMBERS'], inplace=True)
 
 # Remove rows 2 to 10000
-data = data.drop(data.index[1:11000])
+data = data.drop(data.index[1:10000])
 
 # Drop any missing values before modeling
 data = data.dropna()
