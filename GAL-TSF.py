@@ -14,6 +14,19 @@ import sys
 # Set TensorFlow log level to error
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+# Define the VRAM limit
+vram_limit = None
+
+# Limit the VRAM TensorFlow can use
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if vram_limit is not None:
+    if gpus:
+        try:
+            tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=vram_limit)])
+            print(f"VRAM limit set to {vram_limit / 1024} GB")
+        except RuntimeError as e:
+            print(e)
+
 # Initialize current time
 currentTime = datetime.datetime.now().strftime('%m-%d-%Y %H-%M-%S')
 
@@ -44,7 +57,7 @@ x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.
 tuners = [None, 'random', 'bayesian', 'hyperband', 'greedy']
 optimizers = [None, 'adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta', 'adamax', 'nadam']
 loss_funcs = ['mse', 'mae', 'msle', 'mape', 'huber_loss', 'log_cosh', 'poisson', 'cosine_similarity', 'log_cosh']
-scalers = {'robust': sk.RobustScaler(), 'minmax': sk.MinMaxScaler(), 'standard': sk.StandardScaler()}
+scalers = {'minmax': sk.MinMaxScaler(), 'standard': sk.StandardScaler(), 'robust': sk.RobustScaler()}
 
 # Keep track of the progress within the for loop and resume from the last run if the program is interrupted
 current_tuner_index = 0
@@ -67,7 +80,10 @@ def save_pickle():
         print(f"Saved state: (tuner: {current_tuner_index}, optimizer: {current_optimizer_index}, loss function: {current_loss_index}, and scaler: {current_scaler_index})")
 
 # Load model before starting the loop
-current_tuner_index, current_optimizer_index, current_loss_index, current_scaler_index = load_pickle()
+try:
+    current_tuner_index, current_optimizer_index, current_loss_index, current_scaler_index = load_pickle()
+except:
+    save_pickle()
 
 # Iterate over each tuner, optimizer, loss functions, and scaler
 for tuner in tuners[current_tuner_index:]:
@@ -76,12 +92,12 @@ for tuner in tuners[current_tuner_index:]:
             for name, scaler in list(scalers.items())[current_scaler_index:]:
 
                 # Load the loop state after each iteration
-                current_tuner_index, current_optimizer_index, current_scaler_index = load_pickle()
+                current_tuner_index, current_optimizer_index, current_loss_index, current_scaler_index = load_pickle()
 
                 # Print current tuner, optimizer, loss functions, and scaler
                 print(f"Current tuner: {tuner}")
                 print(f"Current optimizer: {optimizer}")
-                print(f"Current loss function: {loss_funcs}")
+                print(f"Current loss function: {loss_func}")
                 print(f"Current scaler: {name}")
 
                 # Specify model directory and project name based on tuner, optimizer, loss function, and scaler
