@@ -135,13 +135,13 @@ for tuner in tuners[current_tuner_index:]:
                     write_graph=True, write_images=True, update_freq='batch', 
                     write_steps_per_second=False
                 )
-                stopping_callback = tf.keras.callbacks.EarlyStopping(
-                    monitor="val_loss",
-                    patience=30
+                checkpoint_callback = tf.keras.callbacks.BackupAndRestore(
+                    backup_dir=get_file_path(f'models\\checkpoints\\{project_name}'),
+                    save_freq='epoch'
                 )
-                
+
                 # Define callbacks list
-                callbacks = [tensorboard_callback, stopping_callback]
+                callbacks = [checkpoint_callback]
 
                 # # Write a batch file to initialize the conda tf environment and TensorBoard in the same cmd window with a sleep after the environment is initialized
                 # c = wmi.WMI()
