@@ -135,8 +135,9 @@ for tuner in tuners[current_tuner_index:]:
                     write_graph=True, write_images=True, update_freq='batch', 
                     write_steps_per_second=False
                 )
+
                 checkpoint_callback = tf.keras.callbacks.BackupAndRestore(
-                    backup_dir=get_file_path(f'models\\checkpoints\\{project_name}'),
+                    backup_dir=get_file_path(get_file_path("forecast\\checkpoints", project_name)),
                     save_freq='epoch'
                 )
 
