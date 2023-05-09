@@ -163,6 +163,7 @@ for tuner in tuners[current_tuner_index:]:
                 # os.system('"' + batch_file + '"')
 
                 # Initialize the model
+                # *** Remember that lookback needs to be a multiple of the batch size. Make this a solved issue on the repo ***
                 def run_model():
                     clf = ak.TimeseriesForecaster(
                         tuner=tuner,
