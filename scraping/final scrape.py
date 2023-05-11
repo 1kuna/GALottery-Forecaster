@@ -17,12 +17,8 @@ def get_file_path(*subdirs, filename=None):
     full_path = full_path.replace("/", "\\")
     return full_path
 
-options = webdriver.ChromeOptions()
-options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-chrome_driver_path = "C:\\Users\\zcane\\miniconda3\\envs\\tf\\chromedriver.exe>"
-
 # Initialize the webdriver
-driver = webdriver.Chrome(chrome_driver_path, options=options)
+driver = webdriver.Chrome()
 
 # Maximize the browser window
 driver.maximize_window()
@@ -37,7 +33,7 @@ driver.find_element(By.CSS_SELECTOR, "#advSearchGameSelect > option:nth-child(8)
 # Enter the "from" date
 driver.find_element(By.CSS_SELECTOR, "#advSearchFromMonth > option:nth-child(1)").click()
 driver.find_element(By.CSS_SELECTOR, "#advSearchFromDay > option:nth-child(1)").click()
-driver.find_element(By.CSS_SELECTOR, "#advSearchFromYear > option:nth-child(18)").click()
+driver.find_element(By.CSS_SELECTOR, "#advSearchFromYear > option:nth-child(26)").click()
 
 # Enter the "to" date
 driver.find_element(By.CSS_SELECTOR, "#advSearchToMonth > option:nth-child(5)").click()
@@ -104,8 +100,9 @@ while True:
         writer.writerows(data)
     print(f"data saved to page {current_page}.csv")
         
-    # Check if the current page is 575
-    if int(current_page) == 594:
+    # Check if the current page is 268 (last page - 7)
+    # UPDATE THIS LATER TO BE LESS SCUFFED
+    if int(current_page) == 286:
         print("Reached last page. Scraping complete.")
         break
 
