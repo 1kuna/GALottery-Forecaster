@@ -1,0 +1,10 @@
+cudatoolkit
+selenium
+chromedriver-binary
+"tensorflow<2.11"
+autokeras
+scikit-learn
+numpy
+pickle
+pyarrow
+fastparquet
