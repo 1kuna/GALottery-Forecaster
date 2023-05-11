@@ -102,7 +102,8 @@ for tuner in tuners[current_tuner_index:]:
 
                 # Specify model directory and project name based on tuner, optimizer, loss function, and scaler
                 model_dir = get_file_path("forecast\\models")
-                project_name = f"{tuner}_{optimizer}_{loss_func}_{name}_{currentTime}"            
+                project_name = f"{tuner}_{optimizer}_{loss_func}_{name}_{currentTime}"
+                checkpoint_name = f"{tuner}_{optimizer}_{loss_func}_{name}"
 
                 # Find the previous run
                 latest_model_path = os.listdir(get_file_path("forecast\\models"))
@@ -137,7 +138,7 @@ for tuner in tuners[current_tuner_index:]:
                 )
 
                 checkpoint_callback = tf.keras.callbacks.BackupAndRestore(
-                    backup_dir=get_file_path(get_file_path("forecast\\checkpoints", project_name)),
+                    backup_dir=get_file_path(get_file_path("forecast\\checkpoints", checkpoint_name)),
                     save_freq='epoch'
                 )
 

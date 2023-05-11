@@ -5,7 +5,7 @@ import os
 base_path = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the full file path to the combined csv subfolder, then get the file
-file_path = os.path.join(base_path, "fullcomb", "combined backup.csv").replace("/", "\\")
+file_path = os.path.join(base_path, "fullcomb", "combinednew.csv").replace("/", "\\")
 
 # Read in the csv file
 data = pd.read_csv(file_path, header=0)
@@ -21,6 +21,9 @@ data["DRAW"] = data["DRAW"].map(draw_mapping).astype("float64")
 data['DATE'] = pd.to_datetime(data['DATE'])
 data['DATE'] = data['DATE'].apply(lambda x: x.timestamp())
 data['DATE'] = data['DATE'].astype('float64')
+
+# Sort the dataframe by date
+data = data.sort_values(by=['DATE'])
 
 # Format the "WINNING NUMBERS" column
 data['WINNING NUMBERS'] = data['WINNING NUMBERS'].apply(lambda x: str(int(x)).zfill(3))
@@ -48,16 +51,16 @@ for lag in range(1, 11):
 data['WINNING NUMBERS'] = pd.to_numeric(data['WINNING NUMBERS'], errors='coerce').astype('float64')
 data.dropna(subset=['WINNING NUMBERS'], inplace=True)
 
-# Remove rows 2 to 10000
-data = data.drop(data.index[1:10000])
+# # Remove rows 2 to 10000
+# data = data.drop(data.index[1:10000])
 
-# Drop any missing values before modeling
+# Drop any missing values before exporting
 data = data.dropna()
 
 # Export the data to a paraquet file
-data.to_parquet(os.path.join(base_path, "fullcomb", "short.parquet").replace("/", "\\"))
+data.to_parquet(os.path.join(base_path, "fullcomb", "shortnew.parquet").replace("/", "\\"))
 print("Data exported to parquet file")
 
 # Export data to a csv file
-data.to_csv(os.path.join(base_path, "fullcomb", "short.csv").replace("/", "\\"), index=False)
+data.to_csv(os.path.join(base_path, "fullcomb", "shortnew.csv").replace("/", "\\"), index=False)
 print("Data exported to csv file")

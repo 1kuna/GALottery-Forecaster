@@ -5,9 +5,24 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import re
+import os
+import glob
+
+# Define function to get full file path
+def get_file_path(*subdirs, filename=None):
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    full_path = os.path.join(base_path, *subdirs)
+    if filename is not None:
+        full_path = os.path.join(full_path, filename)
+    full_path = full_path.replace("/", "\\")
+    return full_path
+
+options = webdriver.ChromeOptions()
+options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+chrome_driver_path = "C:\\Users\\zcane\\miniconda3\\envs\\tf\\chromedriver.exe>"
 
 # Initialize the webdriver
-driver = webdriver.Chrome()
+driver = webdriver.Chrome(chrome_driver_path, options=options)
 
 # Maximize the browser window
 driver.maximize_window()
@@ -25,7 +40,7 @@ driver.find_element(By.CSS_SELECTOR, "#advSearchFromDay > option:nth-child(1)").
 driver.find_element(By.CSS_SELECTOR, "#advSearchFromYear > option:nth-child(18)").click()
 
 # Enter the "to" date
-driver.find_element(By.CSS_SELECTOR, "#advSearchToMonth > option:nth-child(1)").click()
+driver.find_element(By.CSS_SELECTOR, "#advSearchToMonth > option:nth-child(5)").click()
 driver.find_element(By.CSS_SELECTOR, "#advSearchToDay > option:nth-child(1)").click()
 driver.find_element(By.CSS_SELECTOR, "#advSearchToYear > option:nth-child(31)").click()
 
@@ -80,15 +95,17 @@ while True:
         for i in range(len(data)):
             data[i][2] = re.sub(r"(?<!\d)\s(?!\d)", "", data[i][2])
 
+    csv_folder = get_file_path("csv")
+
     # Save the data to a CSV file with page number as the file name
-    with open(f"K:\Creative Cloud Files\python projs\galottery\csv test\page{current_page}.csv", "w", newline="") as f:
+    with open(f"{csv_folder}\\page{current_page}.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(data)
     print(f"data saved to page {current_page}.csv")
         
     # Check if the current page is 575
-    if int(current_page) == 575:
+    if int(current_page) == 594:
         print("Reached last page. Scraping complete.")
         break
 
@@ -101,6 +118,17 @@ while True:
         print("No more pages to scrape.")
         break
 
+# Combine all the CSV files into one
+csv_files = sorted(glob(f"{csv_folder}/*.csv"), key=lambda x: int(x.split('\\')[-1][4:-4]))
+with open("combined.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    for csv_file in csv_files:
+        writer.writerows(csv.reader(open(csv_file)))
+
+# Remove the CSV files
+for csv_file in csv_files:
+    os.remove(f"{csv_folder}\\{csv_file}")
+            
 # Close the browser
 print("Closing browser...")
 driver.close()
