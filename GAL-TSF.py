@@ -40,7 +40,7 @@ def get_file_path(*subdirs, filename=None):
     return full_path
 
 # Read in the paraquet file
-data = pd.read_parquet(get_file_path("fullcomb", filename="short.parquet"))
+data = pd.read_parquet(get_file_path("fullcomb", filename="shortnew.parquet"))
 
 # Define the target column
 target_col = 'WINNING NUMBERS'
@@ -174,7 +174,6 @@ for tuner in tuners[current_tuner_index:]:
                         project_name=project_name,
                         directory=model_dir,
                         overwrite=False,
-                        objective='val_loss',
                         loss=loss_func
                     )
                     return clf

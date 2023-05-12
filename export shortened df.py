@@ -5,7 +5,7 @@ import os
 base_path = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the full file path to the combined csv subfolder, then get the file
-file_path = os.path.join(base_path, "fullcomb", "combinednew.csv").replace("/", "\\")
+file_path = os.path.join(base_path, "fullcomb", "newcombined.csv").replace("/", "\\")
 
 # Read in the csv file
 data = pd.read_csv(file_path, header=0)
@@ -26,30 +26,32 @@ data['DATE'] = data['DATE'].astype('float64')
 data = data.sort_values(by=['DATE'])
 
 # Format the "WINNING NUMBERS" column
-data['WINNING NUMBERS'] = data['WINNING NUMBERS'].apply(lambda x: str(int(x)).zfill(3))
+data['WINNING NUMBERS'] = data['WINNING NUMBERS'].apply(lambda x: str(int(x.replace(" ", ""))).zfill(3))
 
 # Extract each individual digit from "WINNING NUMBERS" and put them into separate columns
 data['winning_digit_1'] = data['WINNING NUMBERS'].str[0].astype("float64")
 data['winning_digit_2'] = data['WINNING NUMBERS'].str[1].astype("float64")
 data['winning_digit_3'] = data['WINNING NUMBERS'].str[2].astype("float64")
 
-# Create lagged values of each number
-for lag in range(1, 11):
-    data[f"winning_number_lag_{lag}"] = data['WINNING NUMBERS'].shift(lag)
+# # Create lagged values of each number
+# for lag in range(1, 11):
+#     data[f"winning_number_lag_{lag}"] = data['WINNING NUMBERS'].shift(lag)
 
-# Extract each individual digit from the lagged "WINNING NUMBERS" columns and put them into separate columns
-for lag in range(1, 11):
-    data[f"winning_digit_1_lag_{lag}"] = data[f"winning_number_lag_{lag}"].str[0].astype("float64")
-    data[f"winning_digit_2_lag_{lag}"] = data[f"winning_number_lag_{lag}"].str[1].astype("float64")
-    data[f"winning_digit_3_lag_{lag}"] = data[f"winning_number_lag_{lag}"].str[2].astype("float64")
+# # Extract each individual digit from the lagged "WINNING NUMBERS" columns and put them into separate columns
+# for lag in range(1, 11):
+#     data[f"winning_digit_1_lag_{lag}"] = data[f"winning_number_lag_{lag}"].str[0].astype("float64")
+#     data[f"winning_digit_2_lag_{lag}"] = data[f"winning_number_lag_{lag}"].str[1].astype("float64")
+#     data[f"winning_digit_3_lag_{lag}"] = data[f"winning_number_lag_{lag}"].str[2].astype("float64")
 
-# Convert lagged numbers back into float64
-for lag in range(1, 11):
-    data[f"winning_number_lag_{lag}"] = pd.to_numeric(data[f"winning_number_lag_{lag}"], errors='coerce').astype('float64')
+# # Convert lagged numbers back into float64
+# for lag in range(1, 11):
+#     data[f"winning_number_lag_{lag}"] = pd.to_numeric(data[f"winning_number_lag_{lag}"], errors='coerce').astype('float64')
 
 # Convert the "WINNING NUMBERS" column to numerical format
 data['WINNING NUMBERS'] = pd.to_numeric(data['WINNING NUMBERS'], errors='coerce').astype('float64')
 data.dropna(subset=['WINNING NUMBERS'], inplace=True)
+
+data.drop(columns=['WINNERS', 'TOTAL PAYOUT'], inplace=True)
 
 # # Remove rows 2 to 10000
 # data = data.drop(data.index[1:10000])

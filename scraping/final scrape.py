@@ -114,6 +114,10 @@ while True:
     else:
         print("No more pages to scrape.")
         break
+        
+# Close the browser
+print("Closing browser...")
+driver.close()
 
 # Combine all the CSV files into one
 csv_files = sorted(glob(f"{csv_folder}/*.csv"), key=lambda x: int(x.split('\\')[-1][4:-4]))
@@ -125,7 +129,3 @@ with open("combined.csv", "w", newline="") as f:
 # Remove the CSV files
 for csv_file in csv_files:
     os.remove(f"{csv_folder}\\{csv_file}")
-            
-# Close the browser
-print("Closing browser...")
-driver.close()
