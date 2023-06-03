@@ -1,3 +1,13 @@
+# TODO: test cross platform compatibility
+# TODO: run unit test for prediction result and text file output
+# TODO: refactor and consolidate loop, potentially breaking it up into multiple functions/files
+# TODO: create yaml file for configuration depenedent on the user's system, run this check at the start of the batch file
+    # TODO: config includes setting up the conda environment and installing packages
+# TODO: clean up file directory structure to be more direct and concise
+# TODO: potentially just turn it into a single executable file with a ui showing progress
+# TODO: figure out how to remove "val_loss metric unavailable" warning verbosity
+# TODO: run an extended test on Mac to ensure compatibility
+
 import pandas as pd
 import autokeras as ak
 import datetime
@@ -8,8 +18,9 @@ import shutil
 from sklearn.model_selection import train_test_split
 import numpy as np
 import pickle
-import wmi
+# import wmi
 import sys
+import platform
 
 # Set TensorFlow log level to error
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -36,7 +47,8 @@ def get_file_path(*subdirs, filename=None):
     full_path = os.path.join(base_path, *subdirs)
     if filename is not None:
         full_path = os.path.join(full_path, filename)
-    full_path = full_path.replace("/", "\\")
+    if platform.system() == "Windows":
+        full_path = full_path.replace("/", "\\")
     return full_path
 
 # Read in the paraquet file
@@ -106,7 +118,7 @@ for tuner in tuners[current_tuner_index:]:
                 checkpoint_name = f"{tuner}_{optimizer}_{loss_func}_{name}"
 
                 # Find the previous run
-                latest_model_path = os.listdir(get_file_path("forecast\\models"))
+                latest_model_path = os.listdir(get_file_path("forecast/models"))
                 latest_model_path.sort(reverse=True)
                 latest_model = None
                 
@@ -116,18 +128,18 @@ for tuner in tuners[current_tuner_index:]:
 
                 # If latest model is not none, change TensorBoard current, old directory, and callback to the latest model
                 if latest_model is not None:
-                    tensorboard_dir = os.path.join(get_file_path("forecast\\tensorboard"), latest_model)
-                    old_tb_dir = os.path.join(get_file_path("forecast\\old tb"), latest_model)
+                    tensorboard_dir = os.path.join(get_file_path("forecast/tensorboard"), latest_model)
+                    old_tb_dir = os.path.join(get_file_path("forecast/old tb"), latest_model)
                     # Redefine TensorBoard callback
                     tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                        log_dir=os.path.join(get_file_path("forecast\\tensorboard"), latest_model), histogram_freq=50, 
+                        log_dir=os.path.join(get_file_path("forecast/tensorboard"), latest_model), histogram_freq=50, 
                         write_graph=True, write_images=True, update_freq='batch', 
                         profile_batch=1, write_steps_per_second=False
                     )
                 else:
                     # Specify TensorBoard directory based on tuner, optimizer, loss function, and scaler
-                    tensorboard_dir = os.path.join(get_file_path("forecast\\tensorboard"), project_name)
-                    old_tb_dir = os.path.join(get_file_path("forecast\\old tb"), project_name)
+                    tensorboard_dir = os.path.join(get_file_path("forecast/tensorboard"), project_name)
+                    old_tb_dir = os.path.join(get_file_path("forecast/old tb"), project_name)
 
 
                 # Define callbacks
@@ -138,7 +150,7 @@ for tuner in tuners[current_tuner_index:]:
                 )
 
                 checkpoint_callback = tf.keras.callbacks.BackupAndRestore(
-                    backup_dir=get_file_path(get_file_path("forecast\\checkpoints", checkpoint_name)),
+                    backup_dir=get_file_path(get_file_path("forecast/checkpoints", checkpoint_name)),
                     save_freq='epoch'
                 )
 
