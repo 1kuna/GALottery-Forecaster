@@ -1,3 +1,7 @@
+### HIGH PRIORITY
+### TODO: fix error `tensorflow.python.framework.errors_impl.PermissionDeniedError: Failed to remove a directory: k:\Git\KUNA\GALottery-Forecaster\forecast\checkpoints\None_None_mse_minmax\chief; Permission denied`
+### HIGH PRIORITY
+
 # TODO: test cross platform compatibility
 # TODO: run unit test for prediction result and text file output
 # TODO: refactor and consolidate loop, potentially breaking it up into multiple functions/files
