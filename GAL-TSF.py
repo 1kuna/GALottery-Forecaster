@@ -2,7 +2,7 @@
 ### TODO: fix error `tensorflow.python.framework.errors_impl.PermissionDeniedError: Failed to remove a directory: k:\Git\KUNA\GALottery-Forecaster\forecast\checkpoints\None_None_mse_minmax\chief; Permission denied`
 ### HIGH PRIORITY
 
-# TODO: test cross platform compatibility
+# TODO: test cross platform compatibility; run an extended test on Mac to ensure compatibility
 # TODO: run unit test for prediction result and text file output
 # TODO: refactor and consolidate loop, potentially breaking it up into multiple functions/files
 # TODO: create yaml file for configuration depenedent on the user's system, run this check at the start of the batch file
@@ -10,7 +10,7 @@
 # TODO: clean up file directory structure to be more direct and concise
 # TODO: potentially just turn it into a single executable file with a ui showing progress
 # TODO: figure out how to remove "val_loss metric unavailable" warning verbosity
-# TODO: run an extended test on Mac to ensure compatibility
+# TODO: ignore cupti error
 
 import pandas as pd
 import autokeras as ak
@@ -70,8 +70,8 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.10, shuffl
 x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.10, shuffle=False)
 
 # Initialize tuners, optimizers, loss functions, and scalers
-tuners = [None, 'random', 'bayesian', 'hyperband', 'greedy']
-optimizers = [None, 'adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta', 'adamax', 'nadam']
+tuners = ['random', 'bayesian', 'hyperband', 'greedy']
+optimizers = ['adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta', 'adamax', 'nadam']
 loss_funcs = ['mse', 'mae', 'msle', 'mape', 'huber_loss', 'log_cosh', 'poisson', 'cosine_similarity', 'log_cosh']
 scalers = {'minmax': sk.MinMaxScaler(), 'standard': sk.StandardScaler(), 'robust': sk.RobustScaler()}
 
@@ -83,7 +83,7 @@ current_scaler_index = 0
 
 # Load the loop state if the program is interrupted
 def load_pickle():
-    with open(get_file_path("loop_state.pickle"), "rb") as f:
+    with open(get_file_path("forecast/loop_state.pickle"), "rb") as f:
         state = pickle.load(f)
         current_tuner_index, current_optimizer_index, current_loss_index, current_scaler_index = state
         print(f"Resuming from: (tuner: {current_tuner_index}, optimizer: {current_optimizer_index}, loss function: {current_loss_index}, and scaler: {current_scaler_index})")
@@ -91,7 +91,7 @@ def load_pickle():
 
 # Create Pickle save function
 def save_pickle():
-    with open(get_file_path("loop_state.pickle"), "wb") as f:
+    with open(get_file_path("forecast/loop_state.pickle"), "wb") as f:
         pickle.dump((current_tuner_index, current_optimizer_index, current_loss_index, current_scaler_index), f)
         print(f"Saved state: (tuner: {current_tuner_index}, optimizer: {current_optimizer_index}, loss function: {current_loss_index}, and scaler: {current_scaler_index})")
 
@@ -153,13 +153,15 @@ for tuner in tuners[current_tuner_index:]:
                     write_steps_per_second=False
                 )
 
-                checkpoint_callback = tf.keras.callbacks.BackupAndRestore(
+                checkpointing = tf.keras.callbacks.BackupAndRestore(
                     backup_dir=get_file_path(get_file_path("forecast/checkpoints", checkpoint_name)),
                     save_freq='epoch'
                 )
 
+                early_stopping = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=1000000, verbose=1, mode='min')
+
                 # Define callbacks list
-                callbacks = [checkpoint_callback]
+                callbacks = [checkpointing, early_stopping]
 
                 # # Write a batch file to initialize the conda tf environment and TensorBoard in the same cmd window with a sleep after the environment is initialized
                 # c = wmi.WMI()
@@ -190,7 +192,8 @@ for tuner in tuners[current_tuner_index:]:
                         project_name=project_name,
                         directory=model_dir,
                         overwrite=False,
-                        loss=loss_func
+                        loss=loss_func,
+                        metrics="mape"
                     )
                     return clf
 
