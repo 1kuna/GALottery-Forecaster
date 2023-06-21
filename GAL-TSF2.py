@@ -180,9 +180,6 @@ for tuner in tuners[current_tuner_index:]:
         x_val_scaled = scaler.transform(x_val)
         x_test_scaled = scaler.transform(x_test)
 
-        if os.path.exists(get_file_path("forecast2/checkpoints", checkpoint_name)):
-            shutil.rmtree(get_file_path("forecast2/checkpoints", checkpoint_name))
-
         # Train the AutoKeras model
         clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks, batch_size=64)
 
