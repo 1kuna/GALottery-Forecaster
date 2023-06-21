@@ -200,13 +200,15 @@ for tuner in tuners[current_tuner_index:]:
                         
         # Write the model name and error result to a text file and sort the file by error
         with open(get_file_path("forecast2", filename="results.txt"), "a") as f:
-            f.write(f"Model: {project_name} || Percentage Error: {error:.2f}%\n\n")
+            f.write(f"Model: {project_name} || Percentage Error: {error:.2f}%\n")
         with open(get_file_path("forecast2", filename="results.txt"), "r") as f:
             lines = f.readlines()
         with open(get_file_path("forecast2", filename="results.txt"), "w") as f:
-            if len(lines) > 3:
+            if len(lines) > 0:
+                lines.append("\n")
+                lines.append("\n")
                 for line in sorted(lines, key=lambda x: float(x.split(": ")[1]) if len(x.split(": ")) > 1 else 0, reverse=True):
-                    f.write(f"{line}\n")
+                    f.write(f"{line}")
         
         # Move the model to the "finished models" folder and move the TensorBoard model folder to "old tb files" folder if it exists
         shutil.move(get_file_path(model_dir, filename=project_name), get_file_path("forecast2/finished models"))
