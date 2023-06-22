@@ -23,6 +23,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import pickle
 import platform
+import stat
 
 # Set TensorFlow log level to error
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -52,6 +53,14 @@ def get_file_path(*subdirs, filename=None):
     if platform.system() == "Windows":
         full_path = full_path.replace("/", "\\")
     return full_path
+
+# Define function to change file permissions from read-only
+def onerror(func, path, exc_info):
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise
 
 # Read in the paraquet file
 data = pd.read_parquet(get_file_path("fullcomb", filename="shortnew.parquet"))
@@ -180,8 +189,16 @@ for tuner in tuners[current_tuner_index:]:
         x_val_scaled = scaler.transform(x_val)
         x_test_scaled = scaler.transform(x_test)
 
-        # Train the AutoKeras model
-        clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks, batch_size=64)
+        # Train the model but if there is an error, clear the session and try again
+        try:
+            # Train the AutoKeras model
+            clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks, batch_size=64)
+        except:
+            print("Failed to remove checkpoint directory, manually deleting, clearing session and trying again...")
+            tf.keras.backend.clear_session()
+            onerror(get_file_path("forecast2/checkpoints", checkpoint_name), onerror=onerror)
+            clf = run_model()
+            clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks, batch_size=64)
 
         # Evaluate the model but if there is an error, clear the session and try again
         try:
