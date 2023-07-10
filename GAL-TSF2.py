@@ -28,18 +28,24 @@ import stat
 # Set TensorFlow log level to error
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# Define the VRAM limit
-vram_limit = None
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
-# Limit the VRAM TensorFlow can use
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if vram_limit is not None:
-    if gpus:
-        try:
-            tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=vram_limit)])
-            print(f"VRAM limit set to {vram_limit / 1024} GB")
-        except RuntimeError as e:
-            print(e)
+# Set automatic Mixed Precision
+os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
+print(tf.keras.backend.floatx())
+
+# # Define the VRAM limit
+# vram_limit = None
+
+# # Limit the VRAM TensorFlow can use
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# if vram_limit is not None:
+#     if gpus:
+#         try:
+#             tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=vram_limit)])
+#             print(f"VRAM limit set to {vram_limit / 1024} GB")
+#         except RuntimeError as e:
+#             print(e)
 
 # Initialize current time
 currentTime = datetime.datetime.now().strftime('%m-%d-%Y %H-%M-%S')
@@ -65,7 +71,7 @@ def change_permissions(path):
         else:
             raise
 
-    os.walk(path, onerror=onerror)
+    os.walk(path)
 
 # Read in the paraquet file
 data = pd.read_parquet(get_file_path("fullcomb", filename="shortnew.parquet"))
@@ -197,13 +203,13 @@ for tuner in tuners[current_tuner_index:]:
         # Train the model but if there is an error, clear the session and try again
         try:
             # Train the AutoKeras model
-            clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks, batch_size=64)
+            clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=250, shuffle=False, callbacks=callbacks, batch_size=64)
         except:
             print("Failed to remove checkpoint directory, manually deleting, clearing session and trying again...")
             tf.keras.backend.clear_session()
             change_permissions(get_file_path("forecast2/checkpoints", checkpoint_name))
             clf = run_model()
-            clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=None, shuffle=False, callbacks=callbacks, batch_size=64)
+            clf.fit(x_train_scaled, y_train, validation_data=(x_val_scaled, y_val), epochs=250, shuffle=False, callbacks=callbacks, batch_size=64)
 
         # Evaluate the model but if there is an error, clear the session and try again
         try:
